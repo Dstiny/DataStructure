@@ -1,0 +1,8 @@
+
+    线程的中断：
+        interrupt()
+        interrupted()
+        isInterrupted()
+
+    c_2_8
+

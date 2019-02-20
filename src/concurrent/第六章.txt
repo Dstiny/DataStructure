@@ -1,0 +1,234 @@
+
+
+    并发集合：
+
+    6.1 简介
+
+        阻塞式集合：这类集合包括添加和移除数据的方法。当集合已满或为空时，被调用的添加或移除方法就不能立即被执行。
+        那么调用这个方法的线程将被阻塞，知道方法成功运行。
+
+        非阻塞式集合：也包括添加和移除数据方法。如果方法不能立即被执行，则返回null或抛出异常，但调用这个方法不会被
+        阻塞。
+
+        非阻塞式列表对应的实现类：ConcurrentLinkedDeque
+
+        阻塞式列表对应实线类：LinkedBlockingDeque
+
+        用于数据生成或消费的阻塞式列表对应实现类：LinkedTransferQueue
+
+        按优先级排列列表元素的阻塞式列表对应实现类：PriorityBlovkingQueue
+
+        带有延迟列表元素的阻塞式列表对应实现类：DelayQueue类
+
+        非阻塞式可遍历映射对应的实现类：ConcurrentSkipListMap
+
+        随机数字对应实现类：ThreadLocalRandom
+
+        原子变量对应实现类：AtomicLong或AtomicIntegerArray
+
+
+
+    6.2 使用非阻塞式线程安全列表
+
+        ConcurrentLinkedDeque类
+
+        add()将元素添加到列表尾部
+
+        方法为空，返回null.
+        pollFirst():返回并移除列表第一个元素
+        pollLast():返回并移除列表最后一个元素
+
+        size():猎豹数据元素数量，值可能不真实。
+
+        getFirst()或getLast():获取元素，获取的元素不会从列表删除。
+        列表为空，抛出NoSuchElementException
+
+        peek(),peekFirst(),peekLast()：peek()和peekFirst()返回第一个元素。返回的元素不会被删除。
+        列表为空，返回null。
+
+        remove(),removeFirst(),removeLast():remove(),removeFirst()返回第一个元素并删除。
+        列表为空，抛出NoSuchElementException。
+
+
+    6.3 使用阻塞式线程安全列表
+
+        LinkedBlockingDeque类
+
+        put():将元素插入列表中，满的话，调用这个方法将被阻塞
+
+        take()：获取元素，如果为空，将阻塞直到有元素。
+
+        在阻塞时线程被中断，会抛出InterruptedException。
+
+        LinkedBlockingDeque其他不会引起阻塞，获取元素的方法，抛出异常或返回null：
+
+            takeFirst()和takeLast():返回元素，会删除列表中元素。为空，线程将阻塞。
+
+            getRirst()和getLast()：返回元素，不会删除。列表为空，抛出NoSuchElementException异常
+
+            peek(),peekFirst(),peekLast():返回元素，不会删除，列表为空返回null。
+
+            poll(),pollFirst(),pollLast():返回元素，并删除，列表为空返回null。
+
+            add(),addFirst(),addLast():添加元素，列表满时抛出IllegalStateException。
+
+
+    6.4 使用按优先级排序的阻塞式线程安全列表
+
+        有序列表：
+
+        Comparable接口：compareTo():传入参数是一个同类型的对象。这样有两个对象进行比较。返回值一个数字值。
+
+        PriorityBlockingQueue类：添加进给列表的元素必须实现Comparable接口。插入元素时，该类使用compareTo()
+        决定插入元素的位置。越大越靠后。
+
+        阻塞式结构
+
+        带有优先级最高元素放在队列第一个元素。在优先级相同情况下，不保证队列排列顺序。
+
+        其他方法
+
+        clear():清楚所有元素
+
+        take():返回第一个元素。并且删除。队列为空时，线程阻塞直到队列有可用元素。
+
+        put(E e):把对应元素添加到队列中。
+
+        peek():返回队列第一个元素，但不移除
+
+
+    6.5 使用带有延迟元素的线程安全列表
+
+        DelayQueue类：可以存放带有及激活日期的元素
+
+        当调用方法从队列中返回或提取元素时，未来的数据元素日期将被忽略。这些元素对这些方法不可见。
+
+        为了具有调用行为，存放到DelayQueue的元素必须继承Delay接口。Delay接口使对象成为延迟对象，
+        它使存放在DelayQueue的对象具有了激活日期，即到激活日期的时间，该接口强制执行以下两个方法：
+
+            compareTo(Delay o):Delay接口继承了Comparable接口，所以有了这个方法，如果当前的对象延迟值
+            小于参数对象的值，将返回一个小于0的值。...0，1
+
+            getDelay(TimeUnit time):返回到激活日期的剩余时间
+
+        getDelay()用来计算激活日期和实际日期之间的纳秒数
+
+        poll():返回并删除第一个元素。为空返回null
+
+        size():返回列表总个数，包括活动和非活动元素。
+
+        clear():移除队列中所有元素
+
+        offer(E e):插入队列中
+
+        peek():返回第一个元素，不删除
+
+        take():返回第一个元素，删除。为空线程阻塞直到有用的元素。
+
+
+
+    6.6 使用线程安全列表遍历映射
+
+        ConcurrentNavigableMap接口及其实现类：key,value，每部分都必须在不同的类中实现。
+
+        ConcurrentSkipListMap接口及其实现类：与ConcurrentNavableMap相同行为的非阻塞列表。
+        该接口使用使用键值排列所有元素。
+        提供返回一个具体元素方法，这个类也提供获取子映射的方法。
+
+        firstEntry():返回第一个Map.Entry对象，含有映射的第一个元素。不会移除元素。
+
+        Map.Entry对象存在getKey(),getValue()方法。
+
+        lastEntry():最后一个映射元素。
+
+        subMap():返回含有映射中部分元素的ConcurrentNavigableMap对象。
+
+        pollFirst()：可以处理subMap()获取的子映射。获取第一个元素并删除。
+
+
+        ConcurrentSkipListMap的其他方法：
+
+            headMap(K toKey):返回映射中所有键值小于参数值toKey的子映射。
+
+            tailMap(K fromKry):返回映射中所有键值大于参数值toKey的子映射
+
+            pullIfAbsent(K key,V value):如果不存在key键值，将添加这个映射到列表。
+
+            pollLastEntry():返回并移除映射最后一个Map.Entry对象。
+
+            replace(K key,V value):如果映射已存在键key，则用参数的value替换。
+
+
+    6.7 生成并发随机数字
+
+
+        特殊类用于在并发程序生成伪随机数字。
+
+        ThreadLocalRandom类：线程本地变量。每个生成随机数的线程都有一个不同的生成器，但都是在
+        同一个类中被管理，对程序员是透明的。
+
+        current():静态方法，返回与当前线程关联的TaskLocalRandom对象，可以使用这个对象生成随机数。
+        如果调用这个方法的线程还没有关联随机数对象，就会生成一个新的。
+
+        在run()方法中，调用current()获取与本线程关联的随机数生成器，同时也调用nextInt()获取伪随机数字
+
+        ThreadLocalRandom也提供生成long,float和double数字和boolean。
+        还可以为方法指定一个数字作为输入参数，来生成介于0与该数字之间的随机数，还可以为方法指定两个数字作为输入参数
+        ，来生成介于两个参数之间的随机数。
+
+
+    6.8 使用原子变量
+
+        原子变量：java5引入的。提供单个变量上的原子操作。
+
+        CAS原子操作：一般来说，这个操作先获取变量值，然后在本地改变变量的值，然后试图用这
+        个改变的值去替换之前的值。如果之前的值没有被其他线程改变，就可以执行这个替换操作。
+        否则，再执行这个操作。
+
+        AtomicLong类及其方法
+
+            get():
+
+            set():
+
+            getAndAdd():
+
+        也提供了其他原子类：AtomicBoolean,AtomicInteger,AtomicReference.
+
+
+    6.9 使用原子数组
+
+
+        实现一个并发应用时，将不可避免会有多个线程共享一个或多个对象的现象，为了避免数据不一致，
+        需要使用同步机制来保护共享属性的访问。
+        但会存在一些问题：
+        （1）死锁：
+        （2）及时只有一个线程访问对象，也要执行必须的代码来获取锁和释放锁。
+
+        针对这种情况，java引入了比较和交换操作。这个操作使用三步修改变量的值：
+        （1）取得变量旧值。
+        （2）在一个临死变量中修改值，即变量的新值
+        （3）如果上面获得的变量旧值与当前变量值相等，就用新值替换旧值。
+        如果有其他线程修改了这个变量的值，上面获得的变量旧值旧可能与当前变量值不同了。
+
+        比较和交换操作：不需要同步，没死锁而且性能更好。
+
+        java在原子变量实现了这种机制。这些变量提供了实现比较和交换操作的compareAndSet()方法，
+        其他方法也基于它展开。
+
+        java也引入原子数组提供对integer或long数字数组的原子操作。
+
+        AtomicIntegerArray类及其方法：
+
+        getAndIncrement():
+
+        getAndDecrement():
+
+        java提供了另一个原子数组，即AtomicLongArray类，与AtomicIntegerArray类方法相同
+
+        其他方法：
+
+            get(int i):获取指定位置元素
+
+            set(int I,int newValue):
+

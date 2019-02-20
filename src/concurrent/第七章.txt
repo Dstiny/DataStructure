@@ -1,0 +1,264 @@
+
+
+    定制并发类
+
+    7.1  简介：
+
+        java为并发提供了大量接口和类实现并发应用程序。这些接口既包含底层机制，如Thread类、Runnable接口或Callable
+        接口、synchronized关键字，
+        也包含了高层机制，如Executor框架或Fork/Join框架。
+        尽管如此，仍会发现已有的java类无法满足需求。
+
+        这是我们需要基于java提供的类和接口来实现自己定制并发工具。一般来说，我们可以：
+
+        （1）实现一个接口以拥有接口定义的功能，例如：ThreadFactory
+        （2）覆盖类的一些方法，改变这些方法的行为，来满足需求。例如：覆盖Thread类的run()满足需求
+
+        本章学习如何改变这些java并发方法的行为，来满足需求，而不需要从头设计一个并发框架。
+
+
+    7.2  定制ThreadPoolExecutor类：
+
+        Executor框架是一种将线程的创建和执行分离的机制，它基于Executor接口与ExecutorService接口，以及这两个
+        接口的实现类ThreadPoolExecutor展开.
+        Executor有一个内部线程池，并提供将任务传递到池中线程以获得执行的方法。可传递的任务有两种：
+        （1）实现Runnable接口
+        （2）实现Callable接口
+        在这种情况下，只需要传任务到执行器，执行器即可使用线程池中的线程或新创建的线程执行任务。
+        执行器也决定任务执行的时间。
+
+        学习如何覆盖ThreadPoolExecutor类。
+
+        beforeExecutor():
+
+        afterExecutor():
+
+        shutdown();
+
+        shutdownNow():
+
+        getCompletedTaskCount():取得已执行过的任务。
+
+        getActiveCount():正在执行的任务数。
+
+        对于等待的任务，执行器将他们存在阻塞队列里，调用阻塞队列的size()就可以取得等待执行的任务数。
+
+
+    7.3  实现基于优先级的Executor类：
+
+        任务执行器使用一个阻塞队列存放等待执行的任务，并按照=任务到达执行器时的顺序存放。
+
+        另一个是使用优先级的对列存放的新的任务。如果有高优先级级别的线程到达执行器，
+        他将在低级优先级任务之前执行
+
+        可以配置Executor使用Blocking接口的任意实现，比较有趣的一个是DelayQueue。这个类用来存放带有延迟
+        激活的元素，提供了只返回活动对象的方法。
+        可以使用ScheduledThreadPoolExecutor
+
+
+    7.4  实现ThreadFactory接口生成定制线程
+
+        工厂模式：通过1工厂模式，我们能够将对象创建集中化，这样做好处改变对象创建方式变得容易，
+        针对有限资源可以限制创建对象的数量
+
+        ThreadFactory接口实现Thread对象工厂。
+        java并发API的一些高级辅助类，向Executor框架和Fork/Join框架，都使用线程工厂创建线程。
+
+        线程工厂在并发API另一个应用是Executors类。他提供大量方法创建不同类型的Executor对象。
+
+        java并发API提供的Executor类来生成执行线程，生成的执行线程通常是ThreadPoolExecutor类对象。
+        也可以使用这个类的defaultThreadFactory()获取ThreadFactory接口的基本实现。
+        这个工厂生成的线程都属于同一线程组
+
+        也可以自由使用ThreadFactory接口，不拘于Executor框架。
+
+
+    7.5  在Executor对象使用ThreadFactory
+
+        Executor框架基于Executor接口和ExecutorService接口及其实现类ThreadPoolExecutor类展开的。
+        有一个内部线程池，并提供将任务传递到池中以获得执行的方法：
+            传递的任务：Runnable，Callable
+
+        Executor框架内部使用了ThreadFactory接口生成新的线程。。
+        学习如何实现自己线程类，及线程工厂类，如何在执行器中使用工厂类，是执行器执行这个创建的线程。
+
+        使用newCachedThreadPool()创建了一个Executtor对象，并以创建的工厂对象作为传入参数，所以创建的
+        Executor对象将使用这个工厂创建所需要的线程，并执行MyThread类的线程对象。
+
+
+    7.6  定制运行在定时线程池中的任务
+
+        定时线程池(ScheduledThreadPool)：是Executor框架基本线程池的扩展，允许一段时间后定制执行任务。
+        ScheduledThreadPoolExecutor类不仅实现这个功能，还允许执行：
+
+            延迟任务：一段时间后仅执行一次。可以执行Runnable，Callable
+            周期性：这类任务在一段延迟时间后周期性执行。仅可以执行Runnable
+
+            所以定时线程池执行的任务都必须实现RunnableScheduledFuture接口。
+
+        继承了FutureTask类并实现了RunnableScheduledFuture接口。
+        之所以实现RunnableScheduledFuture接口是应因为所有在定时器执行的任务都必须实现这个接口。
+        继承FutureTask类该类提供了RunnableScheduledFuture接口声明方法的有效实现
+        泛型是任务返回的结果。
+
+        decorateTask():修改或替换用于执行runnable的任务。也存在修改或替换Callable接口这样的方法。
+
+        执行器已关闭的情况下，周期性任务不需要再假如到队列中
+
+
+
+    7.7  通过实现ThreadFactory接口为Fork/Join框架生成定制线程
+
+        Fork/Join框架是Executor和ExecutorService接口的实现
+
+        这种执行器用于执行可以分成更小人物体的任务，主要组件
+
+            一种特殊类型任务：由ForkJoinTask类来实现。
+
+            两种操作，fork()分割为小任务。Join()等待小任务操作结束
+
+            工作窃取算法：对线程池的优化。当一个等待任务再等待子任务结束时，执行这个任务的线程可以被用来
+            执行其他的任务。
+
+        Fork/Join框架主类是ForkJoinPool类。
+
+            一个任务队列，存放等待被执行的任务
+
+            一个执行这些任务的线程池
+
+        学习定制一个工作者线程，他被ForkJoinPool类使用，并且学习通过工厂使用它。
+
+        ThreadLocal类：该类实例代表一个线程局部的变量，每条线程都只能看到自己的值，
+        并不会意识到其他线程也存在该变量。
+
+        工作线程：在Fork/Join框架使用的线程。
+
+        ThreadLocal计数器。每个线程都有自己的计数器。
+
+        线程工厂：实现ForkJoinPool.ForkJoinWorkerThreadFactory接口。
+
+        当一个线程正常结束或抛出Exception异常，FoekJoinWorkerThread类提供的onTermination()都会执行。
+        这个方法接受一个Throwable对象作为参数。如果参数为null，工作线程正常结束。
+        不为null，有异常，需要代码处理
+
+
+    7.8  定制运行在Fork/Join框架中的任务
+
+        java7在执行器提供了一个特殊的执行器：旨在拆分和合并技术。
+
+        Fork/Joinne内部讲存在两个元素：
+
+            RecursiveAction：用于任务不返回结果
+
+            RecursiveTask：
+
+        默认情况下，ForkJoinPool类执行的任务是ForkJoinTask对象。我们也可以传递Runnable或Callable对象
+        但他们发挥不出Fork/Join框架的优势
+        一般来说，我们将ForkJoinTask的两种子类传递给ForkJoinPool对象
+
+        学习继承ForkJoinTask类来实现Fork/Join框架下的定制任务。实现计算自身的执行时间并在控制台输出，也可以实现
+        自己的Fork/Join框架任务输出日志信息，并获得任务中使用的资源，或对任务结果进一步处理
+
+        继承ForkJoinTask类实现了MyWorkerTasjk类，任务的基类，能在ForkJoinPool中执行，有所有优点，
+        如工作窃取算法。
+        这个类与RecursiveAction和RecursiveTask类相当。
+
+        当继承ForkJoinTask类时，必须实现下列3个方法：
+
+            setRawResult():被用来设置任务的结果，任务不返回任何结果时，方法为空。
+
+            getRawResult():获取任务的结果，当不返回任何结果时这个方法必须返回null
+
+            exec():实现任务的逻辑本例将任务委托到compute()中，根RecursiveAction与RecursiveTask类一样
+
+
+    7.9 实现定制Lock类
+
+        锁是并发API提供最基本的机制之一。程序员使用锁来保护代码的临界区，
+        所以同一时间只有一个线程执行临界区代码。
+
+            lock():...，其他线程将被阻塞
+
+            unlock():
+
+        通过实现Lock(),来保护临界区代码。
+
+        java并发提供了AbstractQueuedSynchronizer类，用来实现带有锁或信号特性的同步机制。
+        是一个抽象类，提供操作来对临界区代码的访问进行控制，并对等待访问临界区代码的阻塞线程队列
+        进行管理
+
+            tryAcquire():
+            tryRelease():
+
+            在这个两个方法我们需要实现对临界区代码的并发控制
+
+        锁可以被获取的时候，原子变量为0，锁不可用的时候为1
+
+        必须实现AbstractQueuedSychronizer抽象类，因为这个类的其他实现，如ReentrantLock，
+        被实现为私有内部类
+
+
+        通过定制锁，能够得到他的使用情况、控制临界区的锁定时间，还可以实现高级同步机制。
+        例如，对仅在特定时间内才可用的资源进行访问控制。
+
+        AbstractQueuedSynchronizer抽象类提供了两个方法用来管理状态，getState(),setState().
+        这两个方法接受并返回锁状态的整型值。可以使用这两方法而不是原子变量存储状态。
+
+        并发API提供另外一个类实现同步机制，及AbstractQueuedLongSynchronizer抽象类，
+        与AbstractQueuedSynchronizer一样，只是用long属性来存储线程的状态。
+
+
+    7.10 实现基于优先级的传输队列
+
+        java并发API提供了几种用于并发应用程序的数据结构。只需关注以下两种接口：
+
+        LinkedThransferQueue：适用于生产者消费者结构的程序中
+
+        PriorityBlockingQueue：这个数据结构中，元素按照先后顺序存储。元素必须实现Comparable接口
+        并实现其方法。
+        当插入一个元素时，他会与已有元素比较找到合适的位置。
+
+        LinkedTransferQueue中按照元素先后顺序进行存储，先到被优先消费。
+        本节实现。
+
+        例题结构用于生产者消费者，但是里面的问题、、元素按优先级进行排序而不是先后顺序。
+        继承PriorityBlockingQueue类，实现了按元素优先级插入到结构中
+        实现TransferQueue接口，增加与生产者-消费者相关的方法。
+
+        tryTransfer(E e):尝试直接发送一个元素到消费者，消费者正在等待，这个方法把元素存入到可以被立即消费
+        的队列中，返回true。
+
+        transfer(E e):这个方法直接传递一个元素到一个消费者。如果有消费者等待，这个方法将把元素存入到可被立即
+        消费的队列中。
+        否则，元素被存储在已转移（尚未被消费）的元素列表中，线程将阻塞直到元素被消费，
+        线程休眠时必须释放锁
+
+        tryTransfer(E e,long timeout,TimeUnit unit):这个方法与transfer()类似，不过线程休眠时间有参数
+        决定
+
+        take():返回下一个被消费的元素。如果在转移列表transfered有元素，那么就从这个里面获取元素。
+        否则，就从优先队列中获取。
+
+
+    7.11 实现自己的原子对象
+
+        java5，原子变量。提供对单个变量的原子操作。
+
+        操作获取变量值，然后通过本地变量值去改变值，接着尝试该旧值为新值。如果旧值未变，则执行改变，
+        否则，方法重新执行
+
+        如何继承一个原子变量对像和如何实现两个遵守原子操作机制到的单步结束的方法。
+
+        两个原子操作carIn(),carOut().
+
+        原子指令：
+
+            将原子对象赋给一个本地变量
+
+            将本地变量值+1作为新值，并把这个新值赋给另一个不同的变量
+
+            使用compareAndSet()尝试使用新值替换旧值。
+            如果返回true，作为参数的旧值就是当前内部计数器的值，所以计数器发生改变。
+            这个操作以原子执行
+            返回false，作为参数的旧值已不是当前内部计数器的值（另一个线程已修改过），所以这个操作不是原子执行的。
+            将重新开始

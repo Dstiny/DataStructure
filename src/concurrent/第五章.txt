@@ -1,0 +1,168 @@
+
+
+    Fork/Join框架
+
+    5.1 简介
+
+        通常使用java开发并发应用程序时，会创建一些Runnable对象，然后创建对应的Thread对象
+        控制程序这些线程的创建，执行以及线程的状态。
+
+        java5引入执行器框架将任务的创建和执行进行了分离，通过这个框架只需要事项Runnable使用Executor对象，
+        将Runnable对象发送给执行器。执行器在负责这些任务所需的线程。创建，线程的管理，以及线程的结束。
+
+        java7又进一步，包括ExecutorService接口的另一种实现，用来解决特殊问题，就是Fork/Join，也称分解/合并
+        框架。
+
+        Fork/Join框架用来解决能通过分冶技术奖问题分成小任务的问题。
+        在一个任务中，先检查要解决的问题的大小，如果大于一个设定的大小，那就将问题分成可以通过框架来执行的小任务
+        如果问题的大小比设定的大小要小，就可以直接在任务里解决这个问题，然后，根据需要返回任务的结果
+
+        没有固定的公式决定问题的参考大小，从而决定一个任务是否进行拆分。。
+        可以使用在任务中将要处理的元素得数目和执行所需时间的决定参考大小。
+        测试不同参考大小来决定问题最好的一个方案。
+
+        将ForkJoinPool类靠左一个特殊的Executor执行器类型。
+        这个框架主要两种操作：
+        Fork：分解，
+        Join：合并，当一个主任务等待其他创建的子任务完成执行
+
+        Fork/Join框架与执行器框架主要区别在于工作窃取算法。与执行器不同的是，使用Join操作让一个主任务等待它所
+        创建的子任务完成，执行这个任务的线程称为工作者线程。工作者线程寻找其他未被执行的任务，然后开始执行。
+
+        Fork/Join框架有以下限制：
+        （1）任务只能使用fork()和join()操作当做同步机制。如果使用其他同步机制，工作者线程就不能执行其他任务。
+        （2）任务不能执行IO操作，如文件数据的读取与写入。
+        （3）任务不能抛出非运行异常，必须在代码中处理掉这些异常
+
+        Fork/Join框架核心两个类组成：
+
+        ForkJoinPool类：事项了ExecutorService接口和工作窃取算法。管理工作者线程，并提供任务的状态信息，以及
+        任务的执行信息。
+
+        ForkJoiinTask类：是一个将在FoekJoinPool中执行的任务的基类。
+
+        Fork/Join框架提供了在一个任务里执行fork()和join()操作的机制和控制任务状态的方法
+        通常，为了实现Fork/Join任务，需要实现一个以下两个类之一的子类。
+
+        RecursiveAction：用于任务处理没有返回结果的场景
+        RecursiveTask：用于任务处理有返回结果的场景
+
+
+    5.2 创建Fork/Join线程池
+
+        学习使用Fork/Join的基本元素。包括：
+        创建用来执行任务的ForkJoinPool对象
+        创建将在线程池被执行的任务ForkJoinTask子类
+
+        本范例特性：
+
+        采用默认的构造器创建ForkJoinPool对象
+
+        在任务使用javaAPI推荐的结构
+
+        以同步方式执行任务，当一个主任务执行两个或更多的子任务时，这个主任务将等待子任务的完成。用这种方法
+        ，执行主任务的线程，称工作者线程，它将寻找其他子任务来执行，并在子任务执行运行时利用所有线程的优势
+
+        如果将要实现的任务没有返回结果，那么采用RecursiveAction类作为实现任务的基类。
+
+        无参构造ForkJinPool:创建一个线程数等于计算机CPU线程数的线程池。
+
+        由于Task继承了RecursiveAction类，因此不反悔结果。
+
+        调用invokeAll()执行一个主任务锁创建的多个子任务。这是一个同步调用，这个任务等待子任务完成，
+        然后继续执行，执行这个主任务的工作者线程接受另一个等待执行任务并开始执行。这个行为更加高效的
+        任务管理机制。
+
+        ForkJoinPool类其他方法：
+            execute(Runnable task):使用Runable时不会采取工作窃取算法。仅在使用ForkJoinTask类才采用
+
+            invoke(ForkJoinTask<T> task):execute()是异步调用的，这个方法同步调用的。知道传递进来的任务
+            执行结束才会返回。
+
+            也可以使用ExecutorService类中声明的invokeAll()和invokeAny()方法，这些方法接受Callable对象作为
+            参数。这是就不再采取工作窃取算法。因此，最好使用执行器执行Callable对象。
+
+        ForkJoinPool类其他invokeAll()方法：
+        invokeAll(ForkJoinTask<?>...tasks):可变参数列表
+        invokeAll(Collection<T>tasks):传递一个集合，T必须是ForkJoinTask类或其子类。
+
+        虽然ForkJoinPool类用来执行ForkJoinTask对象的，但也可以用来执行Runnable或Callable对象。
+        也可以使用ForkJoinTask类的adapt()接受一个Runnable或Callable对象，将其转化为一个ForkJoinTask对象，
+        然后再执行。
+
+    5.3 合并任务的结果
+
+        Fork/Join框架提供了执行任务并返回结果的能力。
+        这些类型任务都是通过Recursice类来实现的。RecursiveTask继承ForkJoinTask类并实现了由执行器框架
+        提供的Future接口。
+
+        RecursiveTask类实现了Fiture接口，实现get()得到结果。
+        get()
+        get(long time,TimeUnit unit):null
+
+
+    5.4 异步运行任务
+
+        在ForkJoinPool中执行ForkJoinTask时，可以采用同步或异步方式。
+        采用同步方式时，发送任务给Fork/Join线程池的方法知道任务结束才会返回结果。
+        异步，发送任务给执行器的方法将立即返回结果，但是任务仍能运行。
+
+        同步与异步执行任务很大区别：
+        同步时，调用这些方法如invokeAll()时，任务呗挂起，知道任务被发送到Fork/Join线程池中执行完成。允许采用
+        工作窃取算法，来分配一个新任务给正在执行休眠任务的工作者线程。
+        异步时，如fork()方法时，任务将继续执行。因此，ForkJoinPool无法使用工作窃取算法来提升应用程序性能。
+        这个实例，只有调用join()或get()等待任务的结束时，ForkJoinPool才可以使用工作窃取算法
+
+        如果主任务发现一个文件夹，它将创建另一个Task对象来处理这个文件夹，调用fork()把这个新对象发送到线程池中。
+        fork()发送任务到线程池时，如果线程池中存在空闲的工作者线程或创建一个新的线程，那么任务开始执行，
+        fork()会立即返回。
+        因此主任务会继续处理文件夹里其他内容
+        对每一个文件，任务开始比较他的文件扩展名。
+
+        一旦任务处理完指定文件夹所有内容，将调用join()等待发送到线程池所有子任务完成。
+        join()在主任务中被调用，人后等待主任务执行结束，并通过compute()方法返回值。
+        主任务将所有子任务结果合并，这些子任务发送到线程池时带有自己的结果列表，然后通过调用compute()返回值
+
+        使用join()等待任务的结束，然后获取他们的结果，也可以使用get()：
+        get():如果ForkJoinTask类执行结束，或者一直等到结束，那么get()返回由compute()返回的结果。
+        get(long time,TimeUnit unit):任务结果未准备好，null
+
+        get()与join()两个主要区别：
+        join()不能被中断，如果调用join()方法线程中断，将抛出InterruptedException。
+        如果任务抛出任何运行时异常，那么get()返回ExecutionException，但是join()返回RuntimeException。
+
+    5.5 在任务中抛出异常
+
+       非运行时异常：throws try{}catch(){}
+       运行时异常
+
+       不能在ForkJoinTask类的compute()方法找那个抛出任何费运行异常，这个方法没有任何throws声明。
+       需要包含代码处理相关异常。
+       可以抛出运行异常，ForkJoinTask类和ForkJoinPool类的行为点不同。在控制台上，程序没有结束执行，
+       不能看到异常信息。
+       如果异常不被抛出，那么久简单的吞掉异常。
+       但我们可以利用ForkJoinTask类一些方法来获取任务是否有异常抛出，以及抛出哪一种类型异常
+
+       使用ForkJoinTask的completeException()也可以获取异常信息。
+
+
+
+    5.6 取消任务
+
+        在ForkJoinPool类执行ForkJoinTask对象时，在任务开始执行前可以取笑他。
+        ForkJoinTask提供的cancel()方法达到同样的目的。
+
+        取消任务时注意：ForkJoinPool类不提供任何方法来取消行程池正在运行的或等待的所有任务
+        取消任务时，不能取消已被执行的任务。
+
+        cancel()允许取消一个没有被执行的任务。
+        任务已经开始执行，那么调用cancel()也无法取消。
+        这个方法接受一个名为mayInterruptIfRunning的boolean值参数：如果传递true，，即使正在运行的任务也被取消
+
+        ForkJoinTask类默认实现，这个true不起作用。如果任务还没开始执行，这些任务将取消。
+        对于已发送到线程池中的任务没有影响，他们将继续执行。
+
+        ForkJoinTask线程池中任务不运行取消。为了克服这个问题，实现了TaskManager类，它储存发送到线程池中的所有任务
+        可以用一个方法来取消存储的所有任务。如果任务正在运行或已执行完就不能取消。
+
+        cancel()返回false，因此可以尝试去取消所有任务而不用担心可能带来的间接影响

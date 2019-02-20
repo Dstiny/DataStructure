@@ -1,0 +1,236 @@
+
+
+    线程执行器
+
+    4.1  简介
+
+        Thread劣势：
+            Thread创建代码
+            创建Thread对象
+            计算机线程资源
+
+        java5开始执行器框架，围绕着Executor接口和它子接口ExecutorService，以及实现两接口
+        的ThreadPoolExecutor类展开
+
+        这套机制分离了任务创建和执行，通过使用执行器，仅需要将实现Runnable接口的对象发送给执行器即可。
+
+        执行器通过创建需要的线程，实例化，运行。功能不限于此，使用线程池提高程序性能。
+        当发送一个任务给执行器时，执行器会尝试使用线程池中的线程执行任务。
+
+        执行器框架另一个优势是Callable接口，类似于Runnable接口，但是：
+            call(),可以返回结果
+            当发送一个实现Callable接口的对象时，将获得一个实现了Future接口的对象，可以使用这个对象那个
+            控制Callable对象的状态和结果。
+
+    4.2  创建线程执行器
+
+        使用执行器框架第一步创建ThreadPoolExecutor对象。四个构造器或使用Executor工厂类来创建
+        。有了执行器就可以发送实现了Runnable或Callable接口的对象。
+
+        推荐使用Executor工厂创建ThreadPoolExecutor()对象。
+        使用Executor工厂的newCachedThreadPool()创建一个缓存线程池。
+        如果一个线程锁运行的任务执行完成并且这个线程可用，哪么缓存池将会重用这些线程。
+        仅当线程数量合理或线程只运行很短的时间时，适合采用Executor工厂的newCachedThreadPool()方法创建
+        执行器
+
+        向执行器的executor()发送Runnable或Callable任务。
+
+        要显示的结束执行器。
+
+        执行完成所有任务后调用shutDown(),如果结束依旧发送任务，会抛出RejectedExecutionException异常。
+
+        ThreadPoolExecutor对象获取自身状态的方法：
+        3个
+        getLargestPoolSize()获取返回曾经池同一时刻线程数的最大值。
+
+        ThreadPoolExecutor类结束执行：
+            shutdownNow():立即关闭执行器，不在执行正在等待的任务，正在运行的任务将继续运行，但不等待这些完成。
+            返回等待执行的任务列表。
+
+            isTerminated():调用leshutdown()或shutdownNow()，这个方法将返回true。
+
+            isShutdown()：调用了shutdown()，将返回true。
+
+            awaitTermination(long time,TimeUnit unit):这个将会阻塞所调用的线程，直到执行器完成任务或
+            达到指定long值。
+
+
+    4.3  创建固定大小的线程执行器
+
+        newCachedThreadPool()：线程数量过多会超出负载。
+        Executor提供了一个创建指定大小的执行器。
+
+        getTaskCount():返回执行器执行任务的线程数量。
+
+        Executor工厂也存在：newSingleThreadExecutor()方法：创建一个只有单个线程的执行器。同一时间只能
+        执行一个任务
+
+    4.4  在执行器中执行任务并返回结果
+
+        执行器框架优势之一是可以运行并发任务并返回结果。
+        Callable接口：声明的call(),泛型接口，意味着必须声明call方法返回值的类型。
+        Future接口：声明了一些方法来获取由Callable对象产生的结果，并管理他们状态
+
+        Future对象有两个主要目的：
+            控制任务的状态，可以取消任务或检查任务是否已完成。
+            通过call()返回结果。使用get()，这个方法一直等到Callable的call返回结果。如果出现问题，
+            抛出InterruptedException。
+            如果call抛出异常，那么get()抛出ExecutionException
+
+            调用get()方法时，如果Future对象所控制的任务并未完成，那么这个方法一直阻塞到任务完成。
+
+            其他get
+            get(long time,TimeUnit unit):null
+
+    4.5  运行多个任务并处理第一个结果
+
+        常见一个问题：但采用多个并发任务解决一个问题时，往往只关心这些任务的第一个结果。比如给数组排序的算法很多，
+        第一个得到结果的就是最快排序算法。
+
+        ThreadPoolExecutor类invokeAny()方法接收到一个任务列表，运行任务并返回第一个完成任务并且没有
+        抛出异常的任务的执行结果。这个方法返回类型与call()方法返回的类型相同。
+
+        如果任务队列都出现异常，那么invokeAny()抛出ExecutionExcetion。
+
+        其他invokeAny()方法：
+            invokeAny(taskList，long time,TimeUnit unit)
+
+    4.6  运行多个结果并处理所有结果
+
+        执行器框架不仅不需要考虑线程创建和执行，还可以控制执行器中执行任务的状态和获取任务运行结果的Future类。
+
+        想要等待任务完成：2个方法
+
+            isDone(),结束返回true
+            shutsown(),会将线程休眠，直到所有任务执行结束
+        缺点：第一个仅仅判断，第二个必须关闭执行器来等待一个线程，否则调用这个方法线程将立即返回
+
+        ThreadPoolExecutor类还有一个方法：它允许发送一个任务列表给执行器，并等待列表中所有任务执行完成。
+
+        invokeAll()等待所有任务完成，这个方法接受Callable对象那个列表，返回Future列表。在这个任务中每个
+        任务对应一个Future。
+
+        Future泛型类型需要与Callable对象兼容。
+
+        invokeAll()另一点：当所有任务完成后这个方法也执行结束了，调用isDone()都会返回true。
+
+        invokeAll(tasks,long time,TimeUnit unit)
+
+    4.7  在执行器延时执行任务
+
+        ScheduleThreadPoolExecutor类：延迟任务，周期性执行任务。
+
+        执行器框架提供的个类
+
+        newSchduledThreadPool(1):线程数。
+
+        schedule():参数
+            执行的任务
+            任务执行前等待的时间
+            等待时间单位。
+
+        定时任务：给定时间和当前时间的差异值，这个差异值作为时间延迟至值。
+
+        ScheduledThreadPoolExecutor类的schdule()也可以接受Runnable。
+
+        虽然ScheduledThreadPoolExecutor是ThreadPoolExecutor的子类，但java推荐仅在定时任务程序采用
+        ScheduledThreadPoolExecutor
+
+        最后，调用shutdown()方法仍存在待处理任务，可以配置ScheduledThreadPoolExecutor的行为。。默认不管
+        执行器是否结束，代处理任务都会被执行。
+        但通过调用ScheduledThreadPoolExecutor类的setExecuteExistingDelayedTasksAfterShutdownPolicy
+        ()方法则可以改变这个行为。传递false，执行器结束后，待处理任务就不会被执行。
+
+    4.8  在执行器中周期性执行任务
+
+        任务执行完后，会从执行器中删除。想要再次执行就要再发一次任务给执行器。
+
+        使用scheduledAtFixedRate方法发送任务：参数
+            周期性要执行的任务
+            任务第一次执行后的延迟时间，两次执行的时间周期，以及时间单位
+
+        另外注意的是：两次执行之间的周期是指任务在两次执行开始的时间间隔。如果一个周期性的任务需要执行5次，
+        但是却让他每3秒执行一次，那么，在任务执行的过程中将会有两个任务实例存在。
+
+        scheduleAtFixedRate()方法返回一个ScheduledFuture对象，ScheduledFuture接口是扩展了Future
+        接口，于是带有相关定时任务操作。
+
+        ScheduledFuture接口是一个泛型化接口，任务时Runnable对象，必须使用？代替。
+
+        getDelay()方法返回任务下一次执行所需要的剩余时间。
+
+        ScheduledThreadPoolExecutor类还有其他方法安排周期性任务运行。
+        scheduleWithFixedRate(),与scheduledAtFixedRate()相同参数个数。第3个参数不同。
+        scheduleWithFixedRate()表示任务上一次执行结束的时间与任务下一次开始执行的时间。
+        scheduledAtFixedRate()表示任务两次执行开始时间的间隔。
+
+        也可以配置ScheduledThreadPoolExecutor实现shutdown()，默认行为当调用了shutdown后定时任务结束了。
+        可以通过ScheduledThreadPoolExecutor类的setContinueExistingPeriodicTasksShutdownPolicy()
+        改变这个行为，传递true，调用shutdow后周期任务不会停止。
+
+
+    4.9  在执行器中取消任务
+
+        Future接口的cancle()
+
+        如果任务已经完成，或者之前被取消，由于由于某种原因不能取消任务，方法将返回false。
+
+        如果还未执行，那么取消就不会被执行。正在执行就取消楼。
+
+        如果Future对象控制的任务已取消，那么Future对象的get()将会抛出CancellationException
+
+
+    4.10 在执行器中控制任务的完成
+
+        FutureTask类提供了名为done()，允许在执行器中的任务执行结束后，还可以执行一些代码。
+        可以用来一些后期处理操作，如：产生报表，通过邮件发送结果，或释放系统资源。
+
+        任务状态变为isDone()后，无论任务被取消或正常结束，done()都调用。
+
+        虽然无法改变任务结果，任务状态，但可以利用任务关闭资源，输出日志，发送通知等
+
+
+    4.11 在执行器中分离任务的启动与结果的处理
+
+        需要在一个对象添加任务，在另一个对象获取结果。
+
+        java API：CompletionService类
+
+        该类有一个方法用来发送任务给执行器，还有一个方法为下一个已经执行结束任务获取Future对象。
+
+        从内部机制看，CompletionService类使用Executor对象来执行任务。这个行为的优势是共享CompletionService
+        对象，并发送任务到执行器，然后其他对象可以处理任务的结果。
+
+        第二个方法有些不足之处，只能为已经结束的任务获取Future对象，因此，这些Future对象只能用来获取任务结果。
+
+        poll()返回Future对象后，他将从队列中删除这个Future对象。
+        poll两个参数：表示队列完成任务的结果为空时，想要等待任务执行结束的时间。
+
+        CompletionService还可以执行Runnable任务，不过没有任务结果，不适合的。
+
+        无参：poll():检查队列是否有Future对象。如果队列为空立马返回null。否则，他将返回对列中第一个元素，
+        并移除这个元素。
+
+        take():无参数，检查队列是否有Future对象。如果队列为空，他将阻塞线程知道对列有可用的元素。如果队列
+        有元素，将返回队列第一个元素，并移除这个元素
+
+
+    4.12 处理执行器中被拒绝的任务
+
+        调用shutdown()后，执行器只有等待正在运行的任务或等待的任务结束后才真正结束。
+
+        如果在shutdown()与执行器结束之间发送一个任务给执行器，这个任务会被拒绝。因为这个时间段执行器不再接受任务
+
+        ThreadExecutor类提供一套机制，当任务被拒绝时调用这个机制处理。
+
+        为了处理被执行器拒绝的任务，需要创建一个实现RejectedExecutionHandler类得setRejectedExecutionHandler()
+        方法有两个参数：
+            一个Runnable对象：用来存储被拒绝的任务
+            一个Executor对象：存储任务被拒绝的执行器
+
+        被执行器拒绝的每一个任务都将会调用这个方法。
+
+        当执行器接受到一个任务并开始执行时，首先检查shutdown()方法是否已经被调用。
+        如果是，那么执行器就拒绝这个任务。首先，执行求会寻找通过setRejectedExecutionHandler()设置的用于被拒绝
+        的任务的处理程序。如果找到一个处理程序，执行器调用rejectedExecution()方法；
+        否则，抛出RejectedExecutionException。运行时异常，不需要catch处理

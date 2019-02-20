@@ -1,0 +1,200 @@
+
+
+    线程同步辅助类
+
+
+    1.1 简介
+
+        上一章学习同步和临界区概念，讨论了多个并发任务共享一个资源的同步的情况，这个共享资源可以是一个
+        对象也可以是一个对象的属性。访问共享资源的代码块叫临界区
+
+        上一章中：synchronized，Lock（ReentrantLock,ReentrantReadWriteLock.ReadLock和
+        ReentrantReadWriteLock.WriteLock）
+
+        本章学习更加高级同步机制实现多线程间同步
+
+        信号量（Semaphore）：一中计数器，用来保护一个或多个共享资源的访问，是并发编程一中工具，多数语言都存在这个机制
+
+        CountDownLatch：是java的同步辅助类，在完成一组正在其他线程中执行操作之前，允许线程一直等待
+
+        CyclicBarrier：同步辅助类，允许多个线程在某个集合点出相互等待
+
+        Phaser：同步辅助类。把并发任务分成多个阶段运行，在开始下一阶段之前，当前阶段中所有线程都必须执行完成
+
+        Exchange：同步辅助类。提供两个线程之间的数据交换点
+
+        在程序中任何时候都可以使用Semaphore保护临界区，因为他是一个基础同步机制。而其他同步机制则需要
+        根据各自的特性来对其选择使用，选择合适的同步机制
+
+
+    1.2 资源的并发访问控制
+
+        信号量：保护一个或多个共享资源的访问
+
+        如果一个线程访问一个共享资源，先必须获得信号量。如果信号量内部计数器大于0，信号量减1，然后
+        允许访问信号量。计数器>1意味着有可以使用的资源。
+        信号量等于0，信号量会把线程置入休眠直至计数器大于0.计数器等于0意味着所有共享资源已被其他线程使用了，
+        所以需要访问就要等待
+        线程使用完某个资源时信号量必须释放，以便其他线程访问，释放操作使信号量内部计数器+1
+
+
+        实现二进制信号量。一中比较特殊的信号量。
+
+        信号量保护共享资源的访问：
+            先必须通过acquire()方法得到信号量的访问
+            使用共享资源执行必要的操作
+            最后通过release()释放信号量
+
+        acquireUninterruptibly()，信号量阻塞的线程可能会被中断，acquire()抛出异常，该方法忽略异常。
+
+        tryAcquire()：试图获取信号量，能获得就true，否则返回false。避免了线程阻塞和等待信号量的释放。
+
+        信号量的公平性：只要一个类出现多个线程被阻塞并且等待同步资源的释放，就会涉及公平性概念。
+        默认是非公平性模式：选择一个。公平性模式选择等待时间最长的一个。
+        Semaphore构造器也存在第二个参数，boolean类型，false非公平模式
+
+
+
+    1.3 资源的多副本并发访问控制
+
+        信号两可以保护单一共享资源的访问或单一临界区的访问，从而使得保护资源在同一时间只能被一个线程访问。
+        然而信号量也可以保护一个资源的多个副本，或者被多个线程同时执行的临界区
+
+        semaphore=new Semaphore(3);
+        最开始调用acquire()方法的3个线程将获取临界区的访问，其余被阻塞。
+        在临界区代码中线程将获取打印机编号
+
+        acquire(),acquireUninterruptibly(),tryAcquire(),release()方法都有另一种实现方式，即提供了
+        一个int型的传入参数。
+        这个参数声明了线程试图获取或者释放的共享资源数目，也就是想要在信号量内部计数器上删除或者增加
+        的数目。
+        对于acquire(),acquireUninterrupibly(),tryAcquire()讲，如果计数器的值少于参数对应值，那么线程
+        将被阻塞知道计数器累加到或者超过这个值
+
+    1.4 等待多个并发事件的完成
+
+        CountDownLatch类：同步辅助类。完成一组正在其他线程中执行操作之前，允许线程一直等待
+        这个类使用一个整数初始化，这个整数就是线程等待完成操作的数目
+        当一个线程要等待某些操作之前先执行完，需要调用await()，休眠，直到等待的所有的操作完成
+        当某一个操作完成后，调用countDown()将CountDownLatch类的内部计数器减1.
+        当计数器变成0时候，CountDownLatch类将唤醒所有调用await方法进入休眠的线程
+
+        CountDownLatch类有3个基本元素：
+            一个初始值，即定义必须等待先完成的数目
+            await()，需要等待其他事件完成调用
+            countDown()，每个等待的事件完成的线程调用。事件完成。事件完成。
+
+        当创建CountDownLatch对象时使用构造器初始化计数器，当countDown()调用后，计数器减1.
+        当计数器为0时所有因调用await()方法而等待的线程立刻被唤醒
+
+        CountDownLatch对象的内部计数器初始化后不能再被初始化或者修改。
+
+        与其他同步方法相比，CountDownLatch机制有以下不同：
+            不是用来保护资源，用来同步执行多个任务的一个或多个线程。
+            只准许进入一次。计数器到0，在调用countDown()就不会有用。想做类似同步，就重新创建。新的对象
+
+        CountDownLatch类提供了另一种await()即
+        await(long time,TimeUnit unit):指定时间或计数器到0
+
+
+    1.5 在集合点的同步
+
+        cyclic:循环的     barrier:分界线
+
+        CyclicBarrier类:同步辅助类、允许两个或多个线程在某个点进行同步。
+        该类是一个使用整形数进行初始化。这个数就是在某个点同步的线程数量。
+        当一个线程`到达`指定点后，将调用await()，阻塞并休眠这个线程，知道其他线程到达。当最后一个
+        线程调用await()，CyclicBarrier()对象将唤醒所有等待的线程
+
+        CyclicBarrier类有一个很有意义的改进，即他可以传入另一个Runnalble对象作为初始化参数。
+        当所有线程都达到集合点后，CyclicBarrier类将这个Runnable对象作为线程执行。
+        这个特性好的对应分治编程技术。
+
+        CyclicBarrier有一个内部计数器，可以控制指定数目的几个线程必须到达集合点，每一个线程等到集合点
+        就会调用await()通知CyclicBarrier对象，CyclicBarrier对象会让这个线程休眠知道所有线程
+        到达集合点
+        当所有线程到达后，CyclicBarrier对象就会唤醒所有线程，还可以传入Runnable创建一个新的线程，以执行
+        其他任务。
+
+        另一种await方法
+        await(long time,TimeUnit unit)
+
+        getNumberWaiting():获取阻塞的线程
+        getParties():返回同步的线程数量
+
+        CountDownLatch类与CyclicBarrier类有很多共性，但是他们也有一定差异，其中最重要的不同
+        是CyclicBarrier可以被重置回初始状态，并把它内部计数器重置成初始化值
+
+        重置是通过CyclicBarrier类的reset()。当重置后，在await()阻塞的线程会收到一个BrokeBarrierException
+        异常。
+
+        损坏的CyclicBarrier对象：有特殊状态，损坏状态。
+        当在await()等待的一个线程抛出InterruptedException，其他线程将抛出BrokeBarrierException。
+        于是CyclicBarrier对象就处于损坏状态。
+
+        isBroke():处于损坏状态就返回true
+
+    1.6 并发阶段任务的运行
+
+        Phaser类：更加强大，复杂同步辅助类。
+        它允许执行并发阶段任务。
+
+        当我们并发任务并且需要分解几步执行时，这种机制很适应。
+
+        Phaser类机制是在每一步结束的位置进行同步，当所有线程都完成这一步才允许执行下一步
+
+        必须对Phaser类中参与同步操作的任务数进行初始化，不同的是可以动态的增加或者减少任务数。
+
+        arriveAndAwaitAdvanced():等待参与者达到指定数量，才开始运行下面代码。
+        arriveAndDeregister()：注销当前线程，该线程就不会进入休眠状态，会从Phaser对象数量减去。
+
+        phaser有很大一个特性，就是不必对他的方法进行异常处理。只有一个方法会：
+        awaitAdvancedInterruptibly(iny phaser)
+
+        arrive():通知phaser对象一个参与者已完成当前阶段，但是他不应该等待其他线程，小心使用这个方法，
+        因为他不会与其他线程同步。
+
+        awaitAdvance(int phaser):如果传入的阶段参数与当前阶段一致，这个会将当前线程置入休眠，直到这个
+        阶段所有参与者都运行完成。如果传入参数不一致，这个方法立即返回
+
+        awaitAdvanceInterruptibly(int phaser):不一致会抛出异常。
+
+        register():将一个新的参与者注册到phaser，这个新的参与者被当成没有执行完本阶段的线程。
+
+        bulkRegister(int parties):将指定数目的参与者注册到phaser，所有这些新的参与者被当成没有执行完本阶段
+        的线程。
+
+        强制终止：当一个phaser没有参与者，就处于终止状态，不管师傅存在未注册的参与线程，当一个线程出现错误
+        强制终止是有意义的。
+
+        当phaser处于终止状态，arriveAndAwaitAdvance()和awaitAdvance()立即返回一个负数。
+        Phaser类提供了forceTermination()强制phaser进入终止状态。不管是否存在未注册参与者。
+
+        一个Phaser有两种状态。
+        活跃态：存在同步线程时活跃的，在每个阶段结束后进行同步。
+        终止态：当所有参与者都取消注册的时候，处于这种状态。当onAdvance()返回true时候，就处于终止态，
+
+    1.7 并发阶段任务中的阶段切换
+
+        Phaser提供了onAdvance()，他在阶段改变的时候会被自动执行。
+        onAdvance()需要两个int参数：当前的阶段数以及注册的参与者数。
+        返回值false表示phaser继续执行，true已经完成并进入终止态。
+
+        这个方法默认实现如下，如果注册的参与者为0就返回true，否则返回false。
+
+        我们可以继承Phaser来覆盖这个方法。
+
+        阶段切换时，在arriveAndAwaitAdvance()方法休眠的的线程之前，onAdvance()将被自动调用
+
+    1.8 并发任务间数据交换
+
+        Exchange类：同步辅助类。允许并发任务之间交换数据。
+        具体来说，Exchange类允许两个类之间定义同步点。当两个线程都到达同步点，他们交换数据结构，
+        因此第一个数据结构进入第二个线程中，第二个进入第一个。
+
+        在生产者-消费者很适应。经典的并发场景：包含一个List<String> buffer1=new ArrayList<>();缓冲区，
+        一个生产者，一个消费者，--》Exchange
+
+        Exchange类有其他exchange()方法：
+        exchange(V data,long time,TimeUnit unit):data是交换的数据结构。
+
